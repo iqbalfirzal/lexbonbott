@@ -24,7 +24,7 @@ const exchange = new ccxt.binance({
 
 // TRUE for REAL MARKET
 // FALSE for TESTNET
-// exchange.setSandboxMode(true);
+exchange.setSandboxMode(false);
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
