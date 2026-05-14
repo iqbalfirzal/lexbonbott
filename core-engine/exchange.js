@@ -16,8 +16,9 @@ const exchange = new ccxt.binance({
     }
 });
 
-// Using Real Market (Mainnet)
-// exchange.setSandboxMode(true); // Sandbox mode disabled
+// TRUE for REAL MARKET
+// FALSE for TESTNET
+exchange.setSandboxMode(true);
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -30,9 +31,9 @@ export async function withRetry(apiCallFn, maxRetries = 3, delayMs = 5000) {
             attempt++;
             const isRateLimit = error instanceof ccxt.RateLimitExceeded;
             const isNetworkError = error instanceof ccxt.NetworkError;
-            
+
             if ((isRateLimit || isNetworkError) && attempt < maxRetries) {
-                console.warn(`[API Error] ${error.name}: ${error.message}. Retrying in ${delayMs/1000}s (Attempt ${attempt}/${maxRetries})...`);
+                console.warn(`[API Error] ${error.name}: ${error.message}. Retrying in ${delayMs / 1000}s (Attempt ${attempt}/${maxRetries})...`);
                 await sleep(delayMs);
             } else {
                 console.error(`[API Error] Failed after ${attempt} attempts:`, error.message);
@@ -45,7 +46,7 @@ export async function withRetry(apiCallFn, maxRetries = 3, delayMs = 5000) {
 export async function checkConnectionAndBalance() {
     console.log('Fetching balance from Binance Futures Mainnet (REAL)...');
     const balance = await withRetry(() => exchange.fetchBalance());
-    
+
     // Usually ccxt places the free/total values in balance['USDT']
     const usdtBalance = balance['USDT'] ? balance['USDT'].total : 0;
     console.log(`USDT Balance: ${usdtBalance}`);
