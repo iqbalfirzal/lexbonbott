@@ -1,5 +1,5 @@
 import { loadState } from './memory-manager.js';
-import { checkConnectionAndBalance } from './exchange.js';
+import { checkConnectionAndBalance, fetchMarketRadar } from './exchange.js';
 import { askPythonBrain } from './api-bridge.js';
 import { sendAlert } from './hermes.js';
 
@@ -14,7 +14,7 @@ async function main() {
         const stateData = loadState();
         console.log(`Current morning briefing: "${stateData.morning_briefing}"`);
 
-        // 2. Get Binance Testnet Balance
+        // 2. Get Binance Mainnet Balance
         let balance = 0;
         try {
             balance = await checkConnectionAndBalance();
@@ -25,10 +25,30 @@ async function main() {
             console.warn('Continuing without valid balance for testing purposes...');
         }
 
-        // 3. Construct payload
+        // 3. Phase 2 Radar Implementation
+        let targetPairs = [];
+        try {
+            targetPairs = JSON.parse(process.env.TARGET_PAIRS || '["SOLUSDT"]');
+        } catch (e) {
+            console.warn('Failed to parse TARGET_PAIRS, defaulting to SOLUSDT');
+            targetPairs = ["SOLUSDT"];
+        }
+
+        // Convert format from SOLUSDT to SOL/USDT for CCXT
+        const rawSymbol = targetPairs[0];
+        const targetSymbol = rawSymbol.replace('USDT', '/USDT');
+
+        console.log(`Starting Phase 2 Radar for ${targetSymbol}...`);
+        const marketRadar = await fetchMarketRadar(targetSymbol);
+        
+        const summaryMsg = `📡 Fetched 20 candles and order book for ${targetSymbol}`;
+        console.log(summaryMsg);
+        await sendAlert(summaryMsg);
+
+        // 4. Construct payload
         const payload = {
-            market: 'BTC/USDT',
-            action: 'test_phase_1',
+            market_data: marketRadar,
+            action: 'analyze_radar',
             balance: balance,
             memory_state: stateData
         };

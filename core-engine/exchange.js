@@ -51,3 +51,20 @@ export async function checkConnectionAndBalance() {
     console.log(`USDT Balance: ${usdtBalance}`);
     return usdtBalance;
 }
+
+export async function fetchMarketRadar(symbol) {
+    console.log(`Fetching Market Radar for ${symbol}...`);
+    
+    // Fetch last 20 candles for 15m timeframe
+    const ohlcv = await withRetry(() => exchange.fetchOHLCV(symbol, '15m', undefined, 20));
+    
+    // Fetch top 20 bids/asks in the order book
+    const orderBook = await withRetry(() => exchange.fetchOrderBook(symbol, 20));
+    
+    return {
+        symbol,
+        timeframe: '15m',
+        ohlcv,
+        orderBook
+    };
+}
