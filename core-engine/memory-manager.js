@@ -43,3 +43,13 @@ export function updateState(updates) {
         return null;
     }
 }
+
+export function saveState(state) {
+    try {
+        fs.writeFileSync(stateFilePath, JSON.stringify(state, null, 2), 'utf8');
+        return true;
+    } catch (error) {
+        console.error('Error saving memory state:', error);
+        return false;
+    }
+}
