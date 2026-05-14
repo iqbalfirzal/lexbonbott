@@ -1,0 +1,15 @@
+{
+  "name": "lexbon-ai-bot",
+  "version": "1.0.0",
+  "description": "Hybrid Node.js (Core Engine) & Python (AI Brain) trading bot",
+  "main": "core-engine/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node core-engine/index.js"
+  },
+  "dependencies": {
+    "ccxt": "^4.2.0",
+    "dotenv": "^16.4.5",
+    "node-telegram-bot-api": "^0.66.0"
+  }
+}
