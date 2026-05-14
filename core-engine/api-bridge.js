@@ -10,7 +10,7 @@ export function askPythonBrain(payload) {
     return new Promise((resolve, reject) => {
         // Spawn the python process. 'python' is typical for Windows, 'python3' for Unix.
         // We use 'python' as per general Windows environments, but might need adjustment based on python setup.
-        const pythonProcess = spawn('python', [pythonScriptPath]);
+        const pythonProcess = spawn('python3', [pythonScriptPath]);
 
         let outputData = '';
         let errorData = '';

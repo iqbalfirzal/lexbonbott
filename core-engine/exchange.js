@@ -13,12 +13,18 @@ const exchange = new ccxt.binance({
     enableRateLimit: true,
     options: {
         defaultType: 'future'
+    },
+    urls: {
+        api: {
+            public: 'https://testnet.binancefuture.com/fapi/v1',
+            private: 'https://testnet.binancefuture.com/fapi/v1'
+        }
     }
 });
 
 // TRUE for REAL MARKET
 // FALSE for TESTNET
-exchange.setSandboxMode(true);
+// exchange.setSandboxMode(true);
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
