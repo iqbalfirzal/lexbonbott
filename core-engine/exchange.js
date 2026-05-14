@@ -13,11 +13,21 @@ const exchange = new ccxt.binance({
     enableRateLimit: true,
     options: {
         defaultType: 'future'
+    },
+    urls: {
+        api: {
+            fapiPublic: 'https://testnet.binancefuture.com/fapi/v1',
+            fapiPublicV2: 'https://testnet.binancefuture.com/fapi/v2',
+            fapiPublicV3: 'https://testnet.binancefuture.com/fapi/v3',
+            fapiPrivate: 'https://testnet.binancefuture.com/fapi/v1',
+            fapiPrivateV2: 'https://testnet.binancefuture.com/fapi/v2',
+            fapiPrivateV3: 'https://testnet.binancefuture.com/fapi/v3',
+        }
     }
 });
 
 // KUNCI PENGAMANAN REAL MARKET
-exchange.setSandboxMode(true); // Aktifkan ini untuk Testnet
+// exchange.setSandboxMode(true); // CCXT deprecation error, jadi diubah lewat override urls di atas
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
