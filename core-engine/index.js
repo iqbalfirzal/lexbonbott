@@ -3,14 +3,19 @@ import { checkConnectionAndBalance, fetchMarketRadar } from './exchange.js';
 import { askPythonBrain } from './api-bridge.js';
 import { sendAlert } from './hermes.js';
 import { executeAction } from './executor.js';
+import { manageOpenPositions } from './manager.js';
 
 const INTERVAL_MS = parseInt(process.env.SCREENING_INTERVAL_MS || '900000', 10);
+const MGT_INTERVAL_MS = parseInt(process.env.MANAGEMENT_INTERVAL_MS || '180000', 10);
 
 const initMsg = `Initiating infinite trading loop. Cycle: Every ${INTERVAL_MS / 60000} minutes.`;
+const mgtMsg = `Initiating secondary loop: Position Management (Every ${MGT_INTERVAL_MS / 60000} mins).`;
+
 console.log(initMsg);
+console.log(mgtMsg);
 
 // Try to send initial boot alert, but don't block execution if it fails
-sendAlert(`🚀 ${initMsg}\nSystem Booting...`).catch(err => console.error("Initial alert failed:", err));
+sendAlert(`🚀 ${initMsg}\n${mgtMsg}\nSystem Booting...`).catch(err => console.error("Initial alert failed:", err));
 
 async function runTradingCycle() {
     console.log('\n--- Starting New Trading Cycle ---');
@@ -102,6 +107,8 @@ async function runTradingCycle() {
 
 // Start immediately
 runTradingCycle();
+manageOpenPositions();
 
-// Set up infinite loop
+// Set up infinite loops
 setInterval(runTradingCycle, INTERVAL_MS);
+setInterval(manageOpenPositions, MGT_INTERVAL_MS);

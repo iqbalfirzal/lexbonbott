@@ -1,6 +1,7 @@
 import * as dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { loadState, saveState } from './memory-manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,6 +38,20 @@ export async function executeAction(action, currentPrice) {
 
             if (isDryRun) {
                 console.log(`[DRY RUN] Simulating ${type} order for ${action.market}`);
+                
+                const state = loadState();
+                if (!state.active_virtual_trades) state.active_virtual_trades = [];
+                state.active_virtual_trades.push({
+                    symbol: action.market,
+                    side: type,
+                    entry_price: currentPrice,
+                    size: positionSize,
+                    sl: stopLossPrice,
+                    tp: takeProfitPrice,
+                    timestamp: Date.now()
+                });
+                saveState(state);
+
                 return {
                     executed: true,
                     mode: 'DRY_RUN',

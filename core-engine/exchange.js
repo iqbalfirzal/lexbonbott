@@ -16,6 +16,8 @@ const exchange = new ccxt.binance({
     }
 });
 
+export const exchangeInstance = exchange;
+
 // TERHUBUNG KE BINANCE FUTURES MAINNET (REAL MARKET)
 // Peringatan: Bot sekarang berjalan menggunakan dana nyata (Real Funds).
 
