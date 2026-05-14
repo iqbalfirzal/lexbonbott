@@ -4,10 +4,16 @@ import { askPythonBrain } from './api-bridge.js';
 import { sendAlert } from './hermes.js';
 import { executeAction } from './executor.js';
 
-async function main() {
-    const startMsg = 'Starting Lexbon AI Bot - Phase 1 with Hermes...';
-    console.log(startMsg);
-    await sendAlert(`🚀 ${startMsg}\nSystem Booting...`);
+const INTERVAL_MS = parseInt(process.env.SCREENING_INTERVAL_MS || '900000', 10);
+
+const initMsg = `Initiating infinite trading loop. Cycle: Every ${INTERVAL_MS / 60000} minutes.`;
+console.log(initMsg);
+
+// Try to send initial boot alert, but don't block execution if it fails
+sendAlert(`🚀 ${initMsg}\nSystem Booting...`).catch(err => console.error("Initial alert failed:", err));
+
+async function runTradingCycle() {
+    console.log('\n--- Starting New Trading Cycle ---');
 
     try {
         // 1. Load state from memory manager
@@ -87,12 +93,15 @@ async function main() {
             }
         }
         
-        console.log('System loop execution completed.');
+        console.log('Trading cycle execution completed.');
     } catch (error) {
-        console.error('Fatal error in main application loop:', error);
-        await sendAlert(`❌ Fatal Error in Core Engine:\n${error.message}`);
+        console.error('Fatal error in trading cycle:', error);
+        await sendAlert(`❌ Fatal Error in Trading Cycle:\n${error.message}`);
     }
 }
 
-// Execute main function
-main();
+// Start immediately
+runTradingCycle();
+
+// Set up infinite loop
+setInterval(runTradingCycle, INTERVAL_MS);
