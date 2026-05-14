@@ -4,6 +4,7 @@ import { askPythonBrain } from './api-bridge.js';
 import { sendAlert } from './hermes.js';
 import { executeAction } from './executor.js';
 import { manageOpenPositions } from './manager.js';
+import { normalizeSymbol } from './utils.js';
 
 const INTERVAL_MS = parseInt(process.env.SCREENING_INTERVAL_MS || '900000', 10);
 const MGT_INTERVAL_MS = parseInt(process.env.MANAGEMENT_INTERVAL_MS || '180000', 10);
@@ -47,7 +48,7 @@ async function runTradingCycle() {
         }
 
         for (const rawSymbol of targetPairs) {
-            const targetSymbol = rawSymbol.replace('USDT', '/USDT');
+            const targetSymbol = normalizeSymbol(rawSymbol);
             console.log(`\n--- Processing Pair: ${targetSymbol} ---`);
 
             try {

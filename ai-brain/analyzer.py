@@ -41,9 +41,17 @@ You MUST output ONLY valid JSON in this exact structure:
   "action": {{
     "type": "BUY|SELL|STANDBY",
     "market": "{symbol}",
-    "reason": "Detailed rationale citing Order Book walls"
+    "reason": "Detailed rationale citing Order Book walls",
+    "sl_percent": 2.0,
+    "tp_percent": 1.5,
+    "size_weight": 1.0
   }}
 }}
+
+For BUY or SELL actions, you must include dynamic risk parameters:
+- 'sl_percent' (float, e.g., 2.5): Dynamic Stop Loss percentage based on asset volatility.
+- 'tp_percent' (float, e.g., 1.5): Dynamic Take Profit percentage.
+- 'size_weight' (float 0.5 to 1.5): Position sizing multiplier. 1.0 is default allocation. Use 0.5 for high risk, 1.5 for high conviction.
 
 CRITICAL - STRICT ADMIN LOCKS:
 The following pinned lessons are absolute and immutable. You must adhere to them strictly:
@@ -82,7 +90,10 @@ The following pinned lessons are absolute and immutable. You must adhere to them
                 "action": {
                     "type": "STANDBY",
                     "market": symbol,
-                    "reason": "DeepSeek returned invalid JSON. Defaulting to STANDBY for safety."
+                    "reason": "DeepSeek returned invalid JSON. Defaulting to STANDBY for safety.",
+                    "sl_percent": 2.0,
+                    "tp_percent": 1.5,
+                    "size_weight": 1.0
                 },
                 "raw_response": response_content
             }

@@ -84,10 +84,10 @@ if (token && allowedChatId && token !== 'your_telegram_bot_token_here') {
     console.warn('Telegram credentials missing or default in .env. Hermes is disabled.');
 }
 
-export async function sendAlert(message) {
+export async function sendAlert(message, options = { parse_mode: 'HTML' }) {
     if (bot && allowedChatId) {
         try {
-            await bot.sendMessage(allowedChatId, message);
+            await bot.sendMessage(allowedChatId, message, options);
         } catch (error) {
             console.error('Failed to send Telegram alert:', error.message);
         }
