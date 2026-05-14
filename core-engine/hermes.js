@@ -8,8 +8,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const token = process.env.TELEGRAM_BOT_TOKEN;
-const allowedChatId = process.env.TELEGRAM_CHAT_ID;
+const token = process.env.TELEGRAM_BOT_TOKEN ? process.env.TELEGRAM_BOT_TOKEN.trim() : null;
+const allowedChatId = process.env.TELEGRAM_CHAT_ID ? process.env.TELEGRAM_CHAT_ID.trim() : null;
 
 let bot = null;
 
@@ -18,7 +18,13 @@ if (token && allowedChatId && token !== 'your_telegram_bot_token_here') {
 
     // Middleware to check chat ID for security
     const isValidChat = (msg) => {
-        return msg.chat.id.toString() === allowedChatId;
+        const incomingId = msg.chat.id.toString();
+        if (incomingId === allowedChatId) {
+            return true;
+        } else {
+            console.warn(`[Hermes Security] Ignored command from unauthorized chat ID: '${incomingId}'. Expected: '${allowedChatId}'`);
+            return false;
+        }
     };
 
     bot.onText(/\/ping/, (msg) => {
