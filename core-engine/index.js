@@ -2,6 +2,7 @@ import { loadState } from './memory-manager.js';
 import { checkConnectionAndBalance, fetchMarketRadar } from './exchange.js';
 import { askPythonBrain } from './api-bridge.js';
 import { sendAlert } from './hermes.js';
+import { executeAction } from './executor.js';
 
 async function main() {
     const startMsg = 'Starting Lexbon AI Bot - Phase 1 with Hermes...';
@@ -64,7 +65,29 @@ async function main() {
         
         await sendAlert(`🧠 AI Brain Response Received:\nStatus: ${aiResponse.status}\nBriefing: ${aiResponse.morning_briefing}\nAction: ${aiResponse.action?.type || 'Unknown'}`);
         
-        console.log('Phase 1 Scaffolding test completed successfully.');
+        // 6. Phase 4 Execution
+        if (aiResponse.action && aiResponse.action.type) {
+            const actionType = aiResponse.action.type.toUpperCase();
+            
+            if (actionType !== 'STANDBY') {
+                const lastCandle = marketRadar.ohlcv[marketRadar.ohlcv.length - 1];
+                const currentPrice = lastCandle[4]; // Close price of the last candle
+                
+                console.log(`Executing ${actionType} action at price ${currentPrice}...`);
+                const execResult = await executeAction(aiResponse.action, currentPrice);
+                
+                if (execResult.executed) {
+                    await sendAlert(`⚡ EXECUTION: ${execResult.mode} ⚡\nSide: ${execResult.side}\nEntry: ${execResult.entry}\nSize: ${execResult.size.toFixed(4)}\nStop Loss: ${execResult.sl.toFixed(4)}\nTake Profit: ${execResult.tp.toFixed(4)}`);
+                } else {
+                    await sendAlert(`⚠️ EXECUTION FAILED / SKIPPED ⚠️\nReason: ${execResult.message}`);
+                }
+            } else {
+                console.log('Action is STANDBY. No execution required.');
+                await sendAlert(`🛡️ STANDBY MODE 🛡️\nNo trade executed. Capital preserved.`);
+            }
+        }
+        
+        console.log('System loop execution completed.');
     } catch (error) {
         console.error('Fatal error in main application loop:', error);
         await sendAlert(`❌ Fatal Error in Core Engine:\n${error.message}`);
