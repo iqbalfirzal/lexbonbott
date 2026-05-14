@@ -16,6 +16,13 @@ let bot = null;
 if (token && allowedChatId && token !== 'your_telegram_bot_token_here') {
     bot = new TelegramBot(token, { polling: true });
 
+    // Hapus webhook lama (jika ada) yang nyangkut dan memblokir sistem polling
+    bot.deleteWebHook().catch(err => console.error('Failed to clear webhook:', err));
+
+    bot.on('polling_error', (error) => {
+        console.error(`[Hermes Polling Error] Code: ${error.code}, Msg: ${error.message}`);
+    });
+
     // Middleware to check chat ID for security
     const isValidChat = (msg) => {
         const incomingId = msg.chat.id.toString();
@@ -68,7 +75,11 @@ if (token && allowedChatId && token !== 'your_telegram_bot_token_here') {
         bot.sendMessage(allowedChatId, `🧬 <b>Evolution Request Denied</b>.\n\nCore directives (Admin Locks) are immutable:\n\n${lessonsText}`, { parse_mode: 'HTML' });
     });
 
-    console.log('Hermes (Telegram Bot) initialized successfully.');
+    bot.on('message', (msg) => {
+        console.log(`[Hermes Debug] Received message from: ${msg.chat.id}, text: ${msg.text}`);
+    });
+
+    console.log('Hermes (Telegram Bot) initialized successfully. Polling is ACTIVE.');
 } else {
     console.warn('Telegram credentials missing or default in .env. Hermes is disabled.');
 }
