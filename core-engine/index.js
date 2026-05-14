@@ -18,10 +18,10 @@ async function main() {
         let balance = 0;
         try {
             balance = await checkConnectionAndBalance();
-            await sendAlert(`✅ Connected to Binance Testnet.\n💰 Current USDT Balance: ${balance}`);
+            await sendAlert(`✅ Connected to Binance Mainnet (REAL).\n💰 Current USDT Balance: ${balance}`);
         } catch (error) {
-            console.warn('Warning: Could not fetch balance. Check your .env file or testnet keys.');
-            await sendAlert(`⚠️ Failed to connect to Binance Testnet or fetch balance. Check logs.`);
+            console.warn('Warning: Could not fetch balance. Check your .env file or real API keys.');
+            await sendAlert(`⚠️ Failed to connect to Binance Mainnet or fetch balance. Check logs.`);
             console.warn('Continuing without valid balance for testing purposes...');
         }
 

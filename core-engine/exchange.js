@@ -8,16 +8,16 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const exchange = new ccxt.binance({
-    apiKey: process.env.BINANCE_TESTNET_API_KEY,
-    secret: process.env.BINANCE_TESTNET_API_SECRET,
+    apiKey: process.env.BINANCE_API_KEY,
+    secret: process.env.BINANCE_API_SECRET,
     enableRateLimit: true,
     options: {
         defaultType: 'future'
     }
 });
 
-// Enable testnet URLs
-exchange.setSandboxMode(true);
+// Using Real Market (Mainnet)
+// exchange.setSandboxMode(true); // Sandbox mode disabled
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -43,7 +43,7 @@ export async function withRetry(apiCallFn, maxRetries = 3, delayMs = 5000) {
 }
 
 export async function checkConnectionAndBalance() {
-    console.log('Fetching balance from Binance Futures Testnet...');
+    console.log('Fetching balance from Binance Futures Mainnet (REAL)...');
     const balance = await withRetry(() => exchange.fetchBalance());
     
     // Usually ccxt places the free/total values in balance['USDT']
