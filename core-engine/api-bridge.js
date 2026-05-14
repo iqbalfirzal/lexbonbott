@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -8,9 +9,14 @@ const pythonScriptPath = path.join(__dirname, '../ai-brain/analyzer.py');
 
 export function askPythonBrain(payload) {
     return new Promise((resolve, reject) => {
-        // Spawn the python process. 'python' is typical for Windows, 'python3' for Unix.
-        // We use 'python' as per general Windows environments, but might need adjustment based on python setup.
-        const pythonProcess = spawn('python3', [pythonScriptPath]);
+        // Detect if a virtual environment exists to bypass PEP-668 block on Ubuntu
+        const venvPythonPath = path.join(__dirname, '../venv/bin/python3');
+        const pythonExecutable = fs.existsSync(venvPythonPath) 
+            ? venvPythonPath 
+            : (process.platform === 'win32' ? 'python' : 'python3');
+
+        // Spawn the python process
+        const pythonProcess = spawn(pythonExecutable, [pythonScriptPath]);
 
         let outputData = '';
         let errorData = '';
