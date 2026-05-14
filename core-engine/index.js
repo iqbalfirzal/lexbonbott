@@ -37,7 +37,7 @@ async function runTradingCycle() {
             console.warn('Continuing without valid balance for testing purposes...');
         }
 
-        // 3. Phase 2 Radar Implementation
+        // 3. Phase 8 Multi-Pair Implementation
         let targetPairs = [];
         try {
             targetPairs = JSON.parse(process.env.TARGET_PAIRS || '["SOLUSDT"]');
@@ -46,56 +46,61 @@ async function runTradingCycle() {
             targetPairs = ["SOLUSDT"];
         }
 
-        // Convert format from SOLUSDT to SOL/USDT for CCXT
-        const rawSymbol = targetPairs[0];
-        const targetSymbol = rawSymbol.replace('USDT', '/USDT');
+        for (const rawSymbol of targetPairs) {
+            const targetSymbol = rawSymbol.replace('USDT', '/USDT');
+            console.log(`\n--- Processing Pair: ${targetSymbol} ---`);
 
-        console.log(`Starting Phase 2 Radar for ${targetSymbol}...`);
-        const marketRadar = await fetchMarketRadar(targetSymbol);
-        
-        const summaryMsg = `📡 Fetched 20 candles and order book for ${targetSymbol}`;
-        console.log(summaryMsg);
-        await sendAlert(summaryMsg);
+            try {
+                const marketRadar = await fetchMarketRadar(targetSymbol);
+                const summaryMsg = `📡 Fetched 20 candles and order book for ${targetSymbol}`;
+                console.log(summaryMsg);
 
-        // 4. Construct payload
-        const payload = {
-            market_data: marketRadar,
-            action: 'analyze_radar',
-            balance: balance,
-            memory_state: stateData
-        };
+                // 4. Construct payload
+                const payload = {
+                    market_data: marketRadar,
+                    action: 'analyze_radar',
+                    balance: balance,
+                    memory_state: stateData
+                };
 
-        // 4. Send payload to askPythonBrain
-        console.log('Sending payload to Python AI Brain...');
-        const aiResponse = await askPythonBrain(payload);
+                // 5. Send payload to askPythonBrain
+                console.log(`Sending payload to Python AI Brain for ${targetSymbol}...`);
+                const aiResponse = await askPythonBrain(payload);
 
-        // 5. Log the AI's response
-        console.log('\n--- AI Brain Response ---');
-        console.log(JSON.stringify(aiResponse, null, 2));
-        console.log('-------------------------\n');
-        
-        await sendAlert(`🧠 AI Brain Response Received:\nStatus: ${aiResponse.status}\nBriefing: ${aiResponse.morning_briefing}\nAction: ${aiResponse.action?.type || 'Unknown'}`);
-        
-        // 6. Phase 4 Execution
-        if (aiResponse.action && aiResponse.action.type) {
-            const actionType = aiResponse.action.type.toUpperCase();
-            
-            if (actionType !== 'STANDBY') {
-                const lastCandle = marketRadar.ohlcv[marketRadar.ohlcv.length - 1];
-                const currentPrice = lastCandle[4]; // Close price of the last candle
+                console.log(`\n--- AI Brain Response [${targetSymbol}] ---`);
+                console.log(JSON.stringify(aiResponse, null, 2));
+                console.log('-------------------------\n');
                 
-                console.log(`Executing ${actionType} action at price ${currentPrice}...`);
-                const execResult = await executeAction(aiResponse.action, currentPrice);
+                await sendAlert(`🧠 AI Response [${targetSymbol}]:\nStatus: ${aiResponse.status}\nBriefing: ${aiResponse.morning_briefing}\nAction: ${aiResponse.action?.type || 'Unknown'}`);
                 
-                if (execResult.executed) {
-                    await sendAlert(`⚡ EXECUTION: ${execResult.mode} ⚡\nSide: ${execResult.side}\nEntry: ${execResult.entry}\nSize: ${execResult.size.toFixed(4)}\nStop Loss: ${execResult.sl.toFixed(4)}\nTake Profit: ${execResult.tp.toFixed(4)}`);
-                } else {
-                    await sendAlert(`⚠️ EXECUTION FAILED / SKIPPED ⚠️\nReason: ${execResult.message}`);
+                // 6. Phase 4 Execution
+                if (aiResponse.action && aiResponse.action.type) {
+                    const actionType = aiResponse.action.type.toUpperCase();
+                    
+                    if (actionType !== 'STANDBY') {
+                        const lastCandle = marketRadar.ohlcv[marketRadar.ohlcv.length - 1];
+                        const currentPrice = lastCandle[4]; // Close price
+                        
+                        console.log(`Executing ${actionType} action at price ${currentPrice}...`);
+                        const execResult = await executeAction(aiResponse.action, currentPrice);
+                        
+                        if (execResult.executed) {
+                            await sendAlert(`⚡ EXECUTION: ${execResult.mode} ⚡\nSymbol: ${targetSymbol}\nSide: ${execResult.side}\nEntry: ${execResult.entry}\nSize: ${execResult.size.toFixed(4)}\nStop Loss: ${execResult.sl.toFixed(4)}\nTake Profit: ${execResult.tp.toFixed(4)}`);
+                        } else {
+                            await sendAlert(`⚠️ EXECUTION FAILED / SKIPPED [${targetSymbol}] ⚠️\nReason: ${execResult.message}`);
+                        }
+                    } else {
+                        console.log(`Action is STANDBY for ${targetSymbol}. No execution required.`);
+                    }
                 }
-            } else {
-                console.log('Action is STANDBY. No execution required.');
-                await sendAlert(`🛡️ STANDBY MODE 🛡️\nNo trade executed. Capital preserved.`);
+            } catch (pairError) {
+                console.error(`Error processing pair ${targetSymbol}:`, pairError);
+                await sendAlert(`⚠️ Error processing ${targetSymbol}: ${pairError.message}`);
             }
+
+            // Sleep 2 seconds between pairs to respect CCXT rate limits
+            console.log(`Sleeping 2 seconds before next pair...`);
+            await new Promise(r => setTimeout(r, 2000));
         }
         
         console.log('Trading cycle execution completed.');

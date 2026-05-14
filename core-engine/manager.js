@@ -66,13 +66,43 @@ export async function manageOpenPositions() {
 
             for (let position of activePositions) {
                 const symbol = position.symbol;
-                const pnlPercent = position.percentage;
+                const pnlPercent = position.percentage; // ccxt percentage format
+                const side = position.side; // 'long' or 'short'
+                const entryPrice = position.entryPrice;
 
                 if (pnlPercent >= 1.5) {
-                    const msg = `🛡️ <b>[LIVE] Position Management</b>\nSymbol: ${symbol} is +${pnlPercent}%. Trailing SL logic triggered.`;
-                    console.log(msg.replace(/<[^>]*>?/gm, ''));
-                    await sendAlert(msg, { parse_mode: 'HTML' });
-                    // Cancel old SL and create new SL at entry price
+                    console.log(`[LIVE] Position ${symbol} is in profit: +${pnlPercent}%. Checking Trailing SL logic.`);
+                    
+                    const openOrders = await withRetry(() => exchangeInstance.fetchOpenOrders(symbol));
+                    const slOrders = openOrders.filter(o => o.type === 'stop_market' || o.type === 'stopMarket' || o.type === 'STOP_MARKET');
+                    
+                    let shifted = false;
+
+                    for (let oldSl of slOrders) {
+                        const currentStopPrice = parseFloat(oldSl.stopPrice || oldSl.price);
+                        // Prevent moving SL multiple times if already at breakeven
+                        if (currentStopPrice !== entryPrice) {
+                            console.log(`Canceling old SL order ${oldSl.id} for ${symbol}...`);
+                            await withRetry(() => exchangeInstance.cancelOrder(oldSl.id, symbol));
+
+                            const inverseSide = side === 'long' ? 'sell' : 'buy';
+                            const slFormattedPrice = exchangeInstance.priceToPrecision(symbol, entryPrice);
+
+                            console.log(`Re-creating SL order at breakeven ${slFormattedPrice}`);
+                            await withRetry(() => exchangeInstance.createOrder(symbol, 'STOP_MARKET', inverseSide, oldSl.amount, undefined, {
+                                stopPrice: slFormattedPrice,
+                                reduceOnly: true,
+                                workingType: 'MARK_PRICE'
+                            }));
+                            shifted = true;
+                        }
+                    }
+
+                    if (shifted) {
+                        const msg = `🛡️ <b>[LIVE] Position Management</b>\nSymbol: ${symbol} is +${pnlPercent.toFixed(2)}%.\nAction: Shifted SL to Breakeven (${entryPrice}).`;
+                        console.log(msg.replace(/<[^>]*>?/gm, ''));
+                        await sendAlert(msg, { parse_mode: 'HTML' });
+                    }
                 }
             }
         }

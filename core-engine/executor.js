@@ -2,6 +2,7 @@ import * as dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { loadState, saveState } from './memory-manager.js';
+import { exchangeInstance, withRetry } from './exchange.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,6 +10,8 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const isDryRun = process.env.DRY_RUN === 'true';
 const allocationUsdt = parseFloat(process.env.TRADE_ALLOCATION_USDT || '15');
+const leverage = parseInt(process.env.LEVERAGE || '10', 10);
+const marginMode = process.env.MARGIN_MODE || 'isolated';
 
 export async function executeAction(action, currentPrice) {
     try {
@@ -63,14 +66,76 @@ export async function executeAction(action, currentPrice) {
                     message: `Simulated ${type} successfully.`
                 };
             } else {
-                // Future Phase: Implement real CCXT execution logic here
-                console.warn(`[LIVE WARNING] Live execution not yet implemented. Bypassing.`);
-                return {
-                    executed: false,
-                    mode: 'LIVE',
-                    side: type,
-                    message: 'Live execution not fully implemented yet in Phase 4.'
-                };
+                console.log(`[LIVE] Executing ${type} order for ${action.market} with leverage ${leverage}x`);
+                
+                try {
+                    // 1. Set Margin Mode
+                    try {
+                        await withRetry(() => exchangeInstance.setMarginMode(marginMode, action.market));
+                    } catch (e) {
+                        if (e.message && (e.message.includes('MarginModeAlreadySet') || e.message.includes('No need to change'))) {
+                            // Safe to ignore
+                        } else {
+                            console.warn(`Could not set margin mode for ${action.market}:`, e.message);
+                        }
+                    }
+
+                    // 2. Set Leverage
+                    try {
+                        await withRetry(() => exchangeInstance.setLeverage(leverage, action.market));
+                    } catch (e) {
+                        console.warn(`Could not set leverage for ${action.market}:`, e.message);
+                    }
+
+                    // 3. Position Size with Leverage
+                    const leveragedAllocation = allocationUsdt * leverage;
+                    const rawSize = leveragedAllocation / currentPrice;
+                    const formattedSize = exchangeInstance.amountToPrecision(action.market, rawSize);
+                    
+                    const side = type.toLowerCase();
+                    const inverseSide = side === 'buy' ? 'sell' : 'buy';
+
+                    // 4. Entry Order
+                    console.log(`Placing entry MARKET order: ${side} ${formattedSize} ${action.market}`);
+                    const entryOrder = await withRetry(() => exchangeInstance.createMarketOrder(action.market, side, formattedSize));
+
+                    // 5. SL and TP Orders
+                    const slFormattedPrice = exchangeInstance.priceToPrecision(action.market, stopLossPrice);
+                    const tpFormattedPrice = exchangeInstance.priceToPrecision(action.market, takeProfitPrice);
+
+                    console.log(`Placing SL STOP_MARKET order at ${slFormattedPrice}`);
+                    await withRetry(() => exchangeInstance.createOrder(action.market, 'STOP_MARKET', inverseSide, formattedSize, undefined, {
+                        stopPrice: slFormattedPrice,
+                        reduceOnly: true,
+                        workingType: 'MARK_PRICE'
+                    }));
+
+                    console.log(`Placing TP TAKE_PROFIT_MARKET order at ${tpFormattedPrice}`);
+                    await withRetry(() => exchangeInstance.createOrder(action.market, 'TAKE_PROFIT_MARKET', inverseSide, formattedSize, undefined, {
+                        stopPrice: tpFormattedPrice,
+                        reduceOnly: true,
+                        workingType: 'MARK_PRICE'
+                    }));
+
+                    return {
+                        executed: true,
+                        mode: 'LIVE',
+                        side: type,
+                        size: parseFloat(formattedSize),
+                        entry: currentPrice,
+                        sl: stopLossPrice,
+                        tp: takeProfitPrice,
+                        message: `Live order placed successfully with SL and TP.`
+                    };
+                } catch (liveError) {
+                    console.error('[LIVE EXECUTION ERROR]', liveError);
+                    return {
+                        executed: false,
+                        mode: 'LIVE',
+                        side: type,
+                        message: `Live execution failed: ${liveError.message}`
+                    };
+                }
             }
         }
 
