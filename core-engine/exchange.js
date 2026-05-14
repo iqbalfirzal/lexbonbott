@@ -13,17 +13,11 @@ const exchange = new ccxt.binance({
     enableRateLimit: true,
     options: {
         defaultType: 'future'
-    },
-    urls: {
-        api: {
-            public: 'https://testnet.binancefuture.com/fapi/v1',
-            private: 'https://testnet.binancefuture.com/fapi/v1'
-        }
     }
 });
 
 // KUNCI PENGAMANAN REAL MARKET
-// exchange.setSandboxMode(true);
+exchange.setSandboxMode(true); // Aktifkan ini untuk Testnet
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
